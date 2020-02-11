@@ -1,8 +1,9 @@
 from flask_restplus import Namespace, Resource, fields
 from datetime import datetime
 
+
 # namespace and its metadata
-ns = Namespace('api/cyptocoin', description = 'Cryptocurrencies related operations')
+ns = Namespace('api/cryptocoin', description = 'Cryptocurrencies related operations', endpoint='cryptocoin')
 
 
 
@@ -12,7 +13,13 @@ ns = Namespace('api/cyptocoin', description = 'Cryptocurrencies related operatio
 
 crypto = ns.model('Crypto', {
     "id"         : fields.Integer(readonly=True, description="The crypto data unique identifier"),
-    "url"        : fields.String(required=True, description="The crypto data url"),
+    "name"       : fields.String(required=True, description="The name of the cryptocurrency"),
+    "timestamp"  : fields.Integer(required=True, description="The crypto data timestamp"),
+    "low"        : fields.Float(required=True, description="Lowest price during the bucket interval"),
+    "high"       : fields.Float(required=True, description="Highest price during the bucket interval"),
+    "open"       : fields.Float(required=True, description="Closing price (first trade) in the bucket interval"),
+    "close"      : fields.Float(required=True, description="Opening price (last trade) in the bucket interval"),
+    "bucket"     : fields.Integer(required=True, description="the bucket interval of the crypto data"),
     "created_at" : fields.String(required=True, description="Date of creation")
     })
 
@@ -22,7 +29,7 @@ crypto = ns.model('Crypto', {
 #   DAO
 #=============================================================
 
-class CryptoModel(object):
+class CryptoDAO(object):
     """
     """
 
@@ -32,24 +39,29 @@ class CryptoModel(object):
         self.cpt   = 0    ## TEMP: temporary way to give id
 
 
-    def get(self, id):
+    #---------------------------------------------
+    #   BY CRYPTOCURRENCY NAME
+    #---------------------------------------------
+    def getByName(self, name):
+        """Return all data collections related to a cryptocurrency"""
+        ret = []
+        for crypt in self.cryptos:
+            if crypt['name'] == name:
+                ret.append(crypt)    
+        return ret
+        ns.abort(404, "Cryptocurrency {} doesn't exist".format(name), data={})
+
+
+    #---------------------------------------------
+    #   BY ID
+    #---------------------------------------------
+
+    def getByID(self, id):
         """Return data from a crypto"""
-        for deal in self.cryptos:
-            if deal['id'] == id:
-                return deal
-        ns.abort(404, "Deal {} doesn't exist".format(id), data={})
-
-
-    def create(self, data):
-        """Create a new data collection"""
-        try:
-            crypto = data
-            crypto['id'] = self.cpt = self.cpt + 1    # auto increment id
-            crypto['created_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.cryptos.append(crypto)
-        except TypeError as e:
-            print("Error {}".format(e))
-        return crypto
+        for crypt in self.cryptos:
+            if crypt['id'] == id:
+                return crypt
+        ns.abort(404, "Id {} doesn't exist".format(id), data={})
 
 
     def update(self, id, data):
@@ -65,8 +77,26 @@ class CryptoModel(object):
         self.cryptos.remove(crypto)
 
 
+    #---------------------------------------------
+    #   COMMON
+    #---------------------------------------------
+    def create(self, data):
+        """Create a new data collection"""
+        try:
+            crypto = data
+            crypto['id'] = self.cpt = self.cpt + 1    # auto increment id
+            crypto['created_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.cryptos.append(crypto)
+        except TypeError as e:
+            print("Error {}".format(e))
+        return crypto
+
+
+
 # DAO object
-DAO = CryptoModel()
+DAO = CryptoDAO()
+
+
 
 
 
@@ -75,10 +105,10 @@ DAO = CryptoModel()
 #=============================================================
 
 #---------------------------------------------
-#   DATA LIST
+#   ALL DATA
 #---------------------------------------------
 @ns.route("/", strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
-class DataList(Resource):
+class CryptoList(Resource):
     """
     Get a list of all stored data and allows POST to add new datasets
     """
@@ -98,21 +128,22 @@ class DataList(Resource):
 
 
 #---------------------------------------------
-#   CRUD
+#   CRUD BY ID
 #---------------------------------------------
 @ns.route("/<int:id>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('id', 'The crypto data unique identifier')
-class Data(Resource):
+class CryptoByID(Resource):
     """
     Show a single data item, update one, or delete one
     """
 
-    @ns.doc('get_crypto')
+    @ns.doc('get_crypto_by_id')
     @ns.marshal_with(crypto)
     def get(self, id):
-        """Return a single data collection"""
-        return DAO.get(id), 200
+        """Returns a single data collection by id"""
+        return DAO.getByID(id), 200
+
 
     @ns.doc('update_crypto')
     @ns.marshal_with(crypto)
@@ -120,9 +151,28 @@ class Data(Resource):
         """Update a data collection"""
         return DAO.update(id, ns.payload), 204
 
+
     @ns.doc('delete_crypto')
     @ns.response(204, 'Crypto deleted')
     def delete(self, id):
         """Delete a data collection"""
         DAO.delete(id)
         return '', 204
+
+
+#---------------------------------------------
+#   CRUD BY CRYPTOCURRENCY'S NAME
+#---------------------------------------------
+@ns.route("/<string:name>")
+@ns.response(404, 'Crypto data not found')
+@ns.param('name', 'The name of the cryptocurrency')
+class CryptoByName(Resource):
+    """
+    Show a single data item, update one, or delete one
+    """
+
+    @ns.doc('get_crypto_by_name')
+    @ns.marshal_with(crypto)
+    def get(self, name):
+        """Returns all data collections related to a cryptocurrency"""
+        return DAO.getByName(name), 200
