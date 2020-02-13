@@ -1,5 +1,6 @@
 from flask_restplus import Namespace, Resource, fields
 from datetime import datetime
+import json
 
 from configs import mongo
 
@@ -35,22 +36,20 @@ class CryptoDAO(object):
     """
     """
 
-    def __init__(self):
-        """ """
-        self.cryptos = []   ## TEMP: temporary database for tests
-        self.cpt   = 0    ## TEMP: temporary way to give id
-
-
     #---------------------------------------------
     #   BY CRYPTOCURRENCY NAME
     #---------------------------------------------
     def getByName(self, name):
-        """Return all data collections related to a cryptocurrency"""
-        ret = []
-        for crypt in self.cryptos:
-            if crypt['name'] == name:
-                ret.append(crypt)    
-        return ret
+        """Return all data collections related to a cryptocurrency
+        
+        Parameter
+        -----
+        name (string) : the cryptocurrency's name
+        """
+        cursor = db.find({'name': name})
+        if cursor != None:
+            return list(cursor)
+        ns.abort(404, "Id {} doesn't exist".format(id), data={})
 
 
     #---------------------------------------------
@@ -58,24 +57,29 @@ class CryptoDAO(object):
     #---------------------------------------------
 
     def getByID(self, id):
-        """Return data from a crypto"""
-        for crypt in self.cryptos:
-            if crypt['id'] == id:
-                return crypt
+        """Return data from a crypto
+
+        Parameter
+        ----
+        id (int) : the document unique id
+        
+        """
+        cursor = db.find_one({"_id": id})
+        if cursor != None:
+            return json.dumps(cursor)
         ns.abort(404, "Id {} doesn't exist".format(id), data={})
 
 
     def update(self, id, data):
         """Update a data collection"""
         crypto = self.getByID(id)
-        crypto.update(data)
-        return crypto
+        db.update_one(crypto, data)
 
 
     def delete(self, id):
         """Delete a data collection"""
         crypto = self.getByID(id)
-        self.cryptos.remove(crypto)
+        db.delete_one(crypto)
 
 
     #---------------------------------------------
@@ -85,19 +89,16 @@ class CryptoDAO(object):
     def getAll(self):
         """
         """
-        return db.find({})
+        cursor = db.find({})
+        return list(cursor)
 
 
     def create(self, data):
         """Create a new data collection"""
-        try:
-            crypto = data
-            crypto['id'] = self.cpt = self.cpt + 1    # auto increment id
-            crypto['created_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.cryptos.append(crypto)
-        except TypeError as e:
-            print("Error {}".format(e))
-        return crypto
+        if db.test.count_documents(data) == 0:
+            db.insert_one(data)
+        else:
+            ns.abort(409, "document already exists", data={})
 
 
 
