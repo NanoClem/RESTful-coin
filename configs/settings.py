@@ -12,4 +12,6 @@ PORT = os.getenv('PORT')
 # MONGO
 MONGO_DBNAME = os.getenv('MONGO_DBNAME')
 MONGO_URI    = os.getenv('MONGO_URI')
+CRYPTO_COLLECTION = os.getenv('COLLECTION')
+
 DEBUG        = True

@@ -1,16 +1,13 @@
 from flask import Flask
-from api import api
+
+from api import register_api
 from configs import settings as stg
+from configs import app
+
+
 
 
 if __name__ == '__main__':
-
-    # SETTINGS
-    host = stg.HOST
-    port = stg.PORT
-
-    # INIT APP
-    app = Flask(__name__)
-    api.init_app(app)
-
-    app.run(host=host, port=port, debug=stg.DEBUG)
+    
+    register_api(app)
+    app.run(host=stg.HOST, port=stg.PORT, debug=stg.DEBUG)

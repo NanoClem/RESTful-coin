@@ -1,10 +1,12 @@
 from flask_restplus import Namespace, Resource, fields
 from datetime import datetime
 
+from configs import mongo
+
 
 # namespace and its metadata
 ns = Namespace('api/cryptocoin', description = 'Cryptocurrencies related operations', endpoint='cryptocoin')
-
+db = mongo.db.coins
 
 
 #=============================================================
@@ -49,7 +51,6 @@ class CryptoDAO(object):
             if crypt['name'] == name:
                 ret.append(crypt)    
         return ret
-        ns.abort(404, "Cryptocurrency {} doesn't exist".format(name), data={})
 
 
     #---------------------------------------------
@@ -66,20 +67,27 @@ class CryptoDAO(object):
 
     def update(self, id, data):
         """Update a data collection"""
-        crypto = self.get(id)
+        crypto = self.getByID(id)
         crypto.update(data)
         return crypto
 
 
     def delete(self, id):
         """Delete a data collection"""
-        crypto = self.get(id)
+        crypto = self.getByID(id)
         self.cryptos.remove(crypto)
 
 
     #---------------------------------------------
     #   COMMON
     #---------------------------------------------
+
+    def getAll(self):
+        """
+        """
+        return db.find({})
+
+
     def create(self, data):
         """Create a new data collection"""
         try:
@@ -117,7 +125,7 @@ class CryptoList(Resource):
     @ns.marshal_list_with(crypto)
     def get(self):
         """Return a list of all crypto data"""
-        return DAO.cryptos, 200
+        return DAO.getAll(), 200
 
     @ns.doc('create_deal')
     @ns.expect(crypto)

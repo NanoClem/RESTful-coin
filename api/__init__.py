@@ -1,5 +1,5 @@
 from flask_restplus import Api
-from .crypto_namespace import ns as cryptoNS
+from .crypto_namespace import ns as ns_crypto
 
 
 # API constructor
@@ -9,5 +9,9 @@ api = Api(
     version = 1.0
 )
 
-# Add namespace
-api.add_namespace(cryptoNS)
+
+def register_api(app):
+    """ Registering namespaces and the api to the app
+    """
+    api.add_namespace(ns_crypto)  # Add namespace
+    api.init_app(app)
