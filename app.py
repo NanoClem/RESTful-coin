@@ -1,6 +1,6 @@
 from flask import Flask
 from api import api
-import settings as stg
+from configs import settings as stg
 
 
 if __name__ == '__main__':
