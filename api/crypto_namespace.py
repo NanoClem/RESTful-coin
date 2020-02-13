@@ -1,6 +1,7 @@
 from flask_restplus import Namespace, Resource, fields
 from datetime import datetime
-import json
+from bson.objectid import ObjectId
+from bson.json_util import dumps
 
 from configs import mongo
 
@@ -49,7 +50,7 @@ class CryptoDAO(object):
         cursor = db.find({'name': name})
         if cursor != None:
             return list(cursor)
-        ns.abort(404, "Id {} doesn't exist".format(id), data={})
+        ns.abort(404, "cryptocurrency {} doesn't exist".format(name), data={})
 
 
     #---------------------------------------------
@@ -64,9 +65,9 @@ class CryptoDAO(object):
         id (int) : the document unique id
         
         """
-        cursor = db.find_one({"_id": id})
+        cursor = db.find_one(ObjectId(id))
         if cursor != None:
-            return json.dumps(cursor)
+            return dumps(cursor)
         ns.abort(404, "Id {} doesn't exist".format(id), data={})
 
 
@@ -78,8 +79,8 @@ class CryptoDAO(object):
 
     def delete(self, id):
         """Delete a data collection"""
-        crypto = self.getByID(id)
-        db.delete_one(crypto)
+        data = self.getByID(id)
+        db.delete_one(data)
 
 
     #---------------------------------------------
@@ -96,7 +97,9 @@ class CryptoDAO(object):
     def create(self, data):
         """Create a new data collection"""
         if db.test.count_documents(data) == 0:
+            data['created_at'] = datetime.now()
             db.insert_one(data)
+            return data
         else:
             ns.abort(409, "document already exists", data={})
 
@@ -139,7 +142,7 @@ class CryptoList(Resource):
 #---------------------------------------------
 #   CRUD BY ID
 #---------------------------------------------
-@ns.route("/<int:id>")
+@ns.route("/<string:id>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('id', 'The crypto data unique identifier')
 class CryptoByID(Resource):
@@ -158,7 +161,8 @@ class CryptoByID(Resource):
     @ns.marshal_with(crypto)
     def put(self, id):
         """Update a data collection"""
-        return DAO.update(id, ns.payload), 204
+        DAO.update(id, ns.payload)
+        return '', 204
 
 
     @ns.doc('delete_crypto')
