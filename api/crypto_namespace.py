@@ -2,12 +2,13 @@ from flask_restplus import Namespace, Resource, fields
 from datetime import datetime
 from bson.objectid import ObjectId
 from bson.json_util import dumps
+from bson.errors import InvalidId
 
 from configs import mongo
 
 
 # namespace and its metadata
-ns = Namespace('api/cryptocoin', description = 'Cryptocurrencies related operations', endpoint='cryptocoin')
+ns = Namespace('api', description = 'Cryptocurrencies related operations', endpoint='cryptocoin')
 db = mongo.db.coins
 
 
@@ -16,7 +17,6 @@ db = mongo.db.coins
 #=============================================================
 
 crypto = ns.model('Crypto', {
-    "id"         : fields.Integer(readonly=True, description="The crypto data unique identifier"),
     "name"       : fields.String(required=True, description="The name of the cryptocurrency"),
     "timestamp"  : fields.Integer(required=True, description="The crypto data timestamp"),
     "low"        : fields.Float(required=True, description="Lowest price during the bucket interval"),
@@ -65,10 +65,14 @@ class CryptoDAO(object):
         id (int) : the document unique id
         
         """
-        cursor = db.find_one(ObjectId(id))
-        if cursor != None:
-            return dumps(cursor)
-        ns.abort(404, "Id {} doesn't exist".format(id), data={})
+        try:
+            data = db.find_one({"_id": ObjectId(id)})
+            if data != None:
+                return data
+            ns.abort(404, "Id {} doesn't exist".format(id), data={})
+        except InvalidId:
+            ns.abort(422, "Invalid id {}".format(id), data={})
+        
 
 
     def update(self, id, data):
@@ -80,6 +84,7 @@ class CryptoDAO(object):
     def delete(self, id):
         """Delete a data collection"""
         data = self.getByID(id)
+        print(data)
         db.delete_one(data)
 
 
@@ -119,7 +124,7 @@ DAO = CryptoDAO()
 #---------------------------------------------
 #   ALL DATA
 #---------------------------------------------
-@ns.route("/", strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
+@ns.route("/cryptocoins", strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
 class CryptoList(Resource):
     """
     Get a list of all stored data and allows POST to add new datasets
@@ -142,7 +147,7 @@ class CryptoList(Resource):
 #---------------------------------------------
 #   CRUD BY ID
 #---------------------------------------------
-@ns.route("/<string:id>")
+@ns.route("/cryptocoin/<string:id>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('id', 'The crypto data unique identifier')
 class CryptoByID(Resource):
@@ -176,7 +181,7 @@ class CryptoByID(Resource):
 #---------------------------------------------
 #   CRUD BY CRYPTOCURRENCY'S NAME
 #---------------------------------------------
-@ns.route("/<string:name>")
+@ns.route("/cryptocoins/<string:name>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('name', 'The name of the cryptocurrency')
 class CryptoByName(Resource):
