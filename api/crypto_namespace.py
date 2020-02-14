@@ -74,7 +74,6 @@ class CryptoDAO(object):
             ns.abort(422, "Invalid id {}".format(id), data={})
         
 
-
     def update(self, id, data):
         """Update a data collection"""
         crypto = self.getByID(id)
@@ -92,22 +91,50 @@ class CryptoDAO(object):
     #   COMMON
     #---------------------------------------------
 
+    def exists(self, data):
+        """ Check if a document already exists in collection
+
+        Parameter
+        -----
+        data (dict, json): document to check
+
+        Returns
+        -----
+        True if exists, else False
+        """
+        return db.count_documents(data, limit = 1) != 0
+
+
     def getAll(self):
-        """
-        """
+        """ Get all documents in database """
         cursor = db.find({})
         return list(cursor)
 
 
     def create(self, data):
-        """Create a new data collection"""
-        if db.test.count_documents(data) == 0:
-            data['created_at'] = datetime.now()
-            db.insert_one(data)
-            return data
-        else:
+        """ Create a new data collection """
+        if self.exists(data):
             ns.abort(409, "document already exists", data={})
+        else:
+            data['created_at'] = datetime.now()
+            db.insert(data)
+            return data
 
+
+    def createMany(self, dataList):
+        """
+        """
+        temp = dataList
+        # PRE-PROCESS DATA IN LIST
+        for data in dataList:
+            if self.exists(data):
+                temp.remove(data)
+            else:
+                data['created_at'] = datetime.now()
+        
+        db.insert_many(temp)
+        return temp
+        
 
 
 # DAO object
@@ -122,7 +149,7 @@ DAO = CryptoDAO()
 #=============================================================
 
 #---------------------------------------------
-#   ALL DATA
+#   MANY DATA
 #---------------------------------------------
 @ns.route("/cryptocoins", strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
 class CryptoList(Resource):
@@ -130,13 +157,30 @@ class CryptoList(Resource):
     Get a list of all stored data and allows POST to add new datasets
     """
 
-    @ns.doc('list_deals')
+    @ns.doc('get all collections')
     @ns.marshal_list_with(crypto)
     def get(self):
         """Return a list of all crypto data"""
         return DAO.getAll(), 200
 
-    @ns.doc('create_deal')
+
+    @ns.doc('create many collections')
+    @ns.expect(crypto)
+    @ns.marshal_list_with(crypto, code=201)
+    def post(self):
+        """Create a new crypto data"""
+        return DAO.createMany(ns.payload), 201
+
+
+#---------------------------------------------
+#   ONE DATA
+#---------------------------------------------
+@ns.route("/cryptocoin", strict_slashes = False)
+class Crypto(Resource):
+    """
+    """
+
+    @ns.doc('create one collection')
     @ns.expect(crypto)
     @ns.marshal_with(crypto, code=201)
     def post(self):
