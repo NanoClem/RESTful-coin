@@ -37,9 +37,9 @@ class CryptoDAO(object):
         -----
         name (string) : the cryptocurrency's name
         """
-        cursor = db.find({'name': name})
-        if cursor != None:
-            return list(cursor)
+        cursor = list(db.find({'name': name}))
+        if cursor :
+            return cursor
         ns.abort(404, "cryptocurrency {} doesn't exist".format(name), data={})
 
 
