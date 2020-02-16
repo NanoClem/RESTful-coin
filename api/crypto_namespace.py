@@ -5,6 +5,7 @@ from bson.json_util import dumps
 from bson.errors import InvalidId
 
 from configs import mongo
+from api.models import create_crypto_model
 
 
 # namespace and its metadata
@@ -15,18 +16,7 @@ db = mongo.db.coins
 #=============================================================
 #   MODEL
 #=============================================================
-
-crypto = ns.model('Crypto', {
-    "name"       : fields.String(required=True, description="The name of the cryptocurrency"),
-    "timestamp"  : fields.Integer(required=True, description="The crypto data timestamp"),
-    "low"        : fields.Float(required=True, description="Lowest price during the bucket interval"),
-    "high"       : fields.Float(required=True, description="Highest price during the bucket interval"),
-    "open"       : fields.Float(required=True, description="Closing price (first trade) in the bucket interval"),
-    "close"      : fields.Float(required=True, description="Opening price (last trade) in the bucket interval"),
-    "bucket"     : fields.Integer(required=True, description="the bucket interval of the crypto data"),
-    "created_at" : fields.String(required=True, description="Date of creation")
-    })
-
+crypto = create_crypto_model(ns)
 
 
 #=============================================================
@@ -112,7 +102,7 @@ class CryptoDAO(object):
 
 
     def create(self, data):
-        """ Create a new data collection """
+        """ Create a new data document """
         if self.exists(data):
             ns.abort(409, "document already exists", data={})
         else:
@@ -122,7 +112,7 @@ class CryptoDAO(object):
 
 
     def createMany(self, dataList):
-        """
+        """ Create multiple data documents
         """
         temp = dataList
         # PRE-PROCESS DATA IN LIST
@@ -168,7 +158,7 @@ class CryptoList(Resource):
     @ns.expect(crypto)
     @ns.marshal_list_with(crypto, code=201)
     def post(self):
-        """Create a new crypto data"""
+        """Create multiple crypto data records"""
         return DAO.createMany(ns.payload), 201
 
 
