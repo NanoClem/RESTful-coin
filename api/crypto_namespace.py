@@ -6,6 +6,7 @@ from bson.errors import InvalidId
 
 from configs import mongo
 from api.models import create_crypto_model
+from api.DAO import CryptoDAO
 
 
 # namespace and its metadata
@@ -22,129 +23,22 @@ crypto = create_crypto_model(ns)
 #=============================================================
 #   DAO
 #=============================================================
-
-class CryptoDAO(object):
-    """
-    """
-
-    #---------------------------------------------
-    #   BY CRYPTOCURRENCY NAME
-    #---------------------------------------------
-    def getByName(self, name):
-        """Return all data collections related to a cryptocurrency
-        
-        Parameter
-        -----
-        name (string) : the cryptocurrency's name
-        """
-        cursor = list(db.find({'name': name}))
-        if cursor :
-            return cursor
-        ns.abort(404, "cryptocurrency {} doesn't exist".format(name), data={})
-
-
-    #---------------------------------------------
-    #   BY ID
-    #---------------------------------------------
-
-    def getByID(self, id):
-        """Return data from a crypto
-
-        Parameter
-        ----
-        id (int) : the document unique id
-        
-        """
-        try:
-            data = db.find_one({"_id": ObjectId(id)})
-            if data != None:
-                return data
-            ns.abort(404, "Id {} doesn't exist".format(id), data={})
-        except InvalidId:
-            ns.abort(422, "Invalid id {}".format(id), data={})
-        
-
-    def update(self, id, data):
-        """Update a data collection"""
-        crypto = self.getByID(id)
-        db.update_one(crypto, data)
-
-
-    def delete(self, id):
-        """Delete a data collection"""
-        data = self.getByID(id)
-        print(data)
-        db.delete_one(data)
-
-
-    #---------------------------------------------
-    #   COMMON
-    #---------------------------------------------
-
-    def exists(self, data):
-        """ Check if a document already exists in collection
-
-        Parameter
-        -----
-        data (dict, json): document to check
-
-        Returns
-        -----
-        True if exists, else False
-        """
-        return db.count_documents(data, limit = 1) != 0
-
-
-    def getAll(self):
-        """ Get all documents in database """
-        cursor = db.find({})
-        return list(cursor)
-
-
-    def create(self, data):
-        """ Create a new data document """
-        if self.exists(data):
-            ns.abort(409, "document already exists", data={})
-        else:
-            data['created_at'] = datetime.now()
-            db.insert(data)
-            return data
-
-
-    def createMany(self, dataList):
-        """ Create multiple data documents
-        """
-        temp = dataList
-        # PRE-PROCESS DATA IN LIST
-        for data in dataList:
-            if self.exists(data):
-                temp.remove(data)
-            else:
-                data['created_at'] = datetime.now()
-        
-        db.insert_many(temp)
-        return temp
-        
-
-
-# DAO object
-DAO = CryptoDAO()
-
-
-
+DAO = CryptoDAO(db, ns)
 
 
 #=============================================================
 #   ROUTING
 #=============================================================
+single_route = "/cryptocoin"
+many_route   = "/cryptocoins"
 
 #---------------------------------------------
 #   MANY DATA
 #---------------------------------------------
-@ns.route("/cryptocoins", strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
+@ns.route(many_route, strict_slashes = False)     # strict_slashes setted to False so the debuger ignores it
 class CryptoList(Resource):
     """
-    Get a list of all stored data and allows POST to add new datasets
+    Get a list of all stored data and allows POST for multiple documents
     """
 
     @ns.doc('get all collections')
@@ -163,9 +57,9 @@ class CryptoList(Resource):
 
 
 #---------------------------------------------
-#   ONE DATA
+#   POST ONE DATA
 #---------------------------------------------
-@ns.route("/cryptocoin", strict_slashes = False)
+@ns.route(single_route, strict_slashes = False)
 class Crypto(Resource):
     """
     """
@@ -181,7 +75,7 @@ class Crypto(Resource):
 #---------------------------------------------
 #   CRUD BY ID
 #---------------------------------------------
-@ns.route("/cryptocoin/<string:id>")
+@ns.route(single_route + "<string:id>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('id', 'The crypto data unique identifier')
 class CryptoByID(Resource):
@@ -215,7 +109,7 @@ class CryptoByID(Resource):
 #---------------------------------------------
 #   CRUD BY CRYPTOCURRENCY'S NAME
 #---------------------------------------------
-@ns.route("/cryptocoins/<string:name>")
+@ns.route(many_route + "<string:name>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('name', 'The name of the cryptocurrency')
 class CryptoByName(Resource):
