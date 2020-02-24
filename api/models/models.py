@@ -10,6 +10,7 @@ def create_crypto_fields():
     (dict) : fields of the crypto model
     """
     crypt_field = {
+        "_id"        : fields.String(description="The unique identifier of the document"),
         "name"       : fields.String(required=True, description="The name of the cryptocurrency"),
         "timestamp"  : fields.Integer(required=True, description="The crypto data timestamp"),
         "low"        : fields.Float(required=True, description="Lowest price during the bucket interval"),

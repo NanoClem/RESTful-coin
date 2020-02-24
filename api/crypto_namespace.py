@@ -75,7 +75,7 @@ class Crypto(Resource):
 #---------------------------------------------
 #   CRUD BY ID
 #---------------------------------------------
-@ns.route(single_route + "<string:id>")
+@ns.route(single_route + "/<string:id>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('id', 'The crypto data unique identifier')
 class CryptoByID(Resource):
@@ -109,7 +109,7 @@ class CryptoByID(Resource):
 #---------------------------------------------
 #   CRUD BY CRYPTOCURRENCY'S NAME
 #---------------------------------------------
-@ns.route(many_route + "<string:name>")
+@ns.route(many_route + "/<string:name>")
 @ns.response(404, 'Crypto data not found')
 @ns.param('name', 'The name of the cryptocurrency')
 class CryptoByName(Resource):
