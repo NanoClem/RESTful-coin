@@ -5,8 +5,9 @@ from bson.json_util import dumps
 from bson.errors import InvalidId
 
 from configs import mongo
-from api.models import create_crypto_model
-from api.DAO import CryptoDAO
+from .models import create_crypto_model
+from .DAO import CryptoDAO
+from .auth import token_required
 
 
 # namespace and its metadata
@@ -41,8 +42,9 @@ class CryptoList(Resource):
     Get a list of all stored data and allows POST for multiple documents
     """
 
-    @ns.doc('get all collections')
-    @ns.marshal_list_with(crypto)
+    @ns.doc('get all collections', security='apikey')
+    #@ns.marshal_list_with(crypto, envelope='data')
+    @token_required
     def get(self):
         """Return a list of all crypto data"""
         return DAO.getAll(), 200
@@ -66,7 +68,6 @@ class Crypto(Resource):
 
     @ns.doc('create one collection')
     @ns.expect(crypto)
-    @ns.marshal_with(crypto, code=201)
     def post(self):
         """Create a new crypto data"""
         return DAO.create(ns.payload), 201
@@ -91,11 +92,10 @@ class CryptoByID(Resource):
 
 
     @ns.doc('update_crypto')
-    @ns.marshal_with(crypto)
     def put(self, id):
         """Update a data collection"""
         DAO.update(id, ns.payload)
-        return '', 204
+        return '', 201
 
 
     @ns.doc('delete_crypto')
@@ -118,7 +118,7 @@ class CryptoByName(Resource):
     """
 
     @ns.doc('get_crypto_by_name')
-    @ns.marshal_with(crypto)
+    @ns.marshal_list_with(crypto, envelope='data')
     def get(self, name):
         """Returns all data collections related to a cryptocurrency"""
         return DAO.getByName(name), 200

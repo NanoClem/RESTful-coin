@@ -1,12 +1,15 @@
 from flask_restplus import Api
+
 from .crypto_namespace import ns as ns_crypto
+from .auth import authorizations
 
 
 # API constructor
 api = Api(
     title = "REST-coin",
     description = "interact with mined cryptocurrencies data",
-    version = 1.0
+    version = 1.0,
+    authorizations = authorizations
 )
 
 

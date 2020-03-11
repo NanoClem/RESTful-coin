@@ -43,7 +43,7 @@ class CryptoDAO(object):
         cursor = list(self.db.find({'name': name}))
         if cursor :
             return cursor
-        self.ns.abort(404, error="cryptocurrency {} doesn't exist".format(name), data={})
+        self.ns.abort(404, message="cryptocurrency {} doesn't exist".format(name), data={})
 
 
     #---------------------------------------------
@@ -62,9 +62,9 @@ class CryptoDAO(object):
             data = self.db.find_one({"_id": ObjectId(id)})
             if data != None:
                 return data
-            self.ns.abort(404, error="Id {} doesn't exist".format(id), data={})
+            self.ns.abort(404, message="Id {} doesn't exist".format(id), data={})
         except InvalidId:
-            self.ns.abort(422, error="Invalid id {}".format(id), data={})
+            self.ns.abort(422, message="Invalid id {}".format(id), data={})
         
 
     def update(self, id, data):
@@ -76,7 +76,6 @@ class CryptoDAO(object):
     def delete(self, id):
         """Delete a data collection"""
         data = self.getByID(id)
-        print(data)
         self.db.delete_one(data)
 
 
@@ -93,16 +92,15 @@ class CryptoDAO(object):
     def create(self, data):
         """ Create a new data document """
         if self.exists(data):
-            self.ns.abort(409, error="document already exists", data={})
+            self.ns.abort(409, message="document already exists", data={})
         else:
             data['created_at'] = datetime.now()
             self.db.insert(data)
-            return data
+            return {'message': 'success', 'data': data}
 
 
     def createMany(self, dataList):
-        """ Create multiple data documents
-        """
+        """ Create multiple data documents"""
         temp = dataList
         # PRE-PROCESS DATA IN LIST
         for data in dataList:
